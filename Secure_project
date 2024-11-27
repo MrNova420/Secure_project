@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# Path to store certificates and keys
+CERT_DIR="$HOME/.secure_project"
+SERVER_CERT="$CERT_DIR/server_cert.pem"
+SERVER_KEY="$CERT_DIR/server_key.pem"
+
+# GitHub repository details
+GITHUB_REPO="https://github.com/MrNova420/secure_project.git"
+GIT_DIR="$HOME/project_repo"
+
+# Function to set up encryption
+setup_encryption() {
+    echo -e "\n[INFO] Setting up encryption and privacy..."
+
+    # Create directory for storing certificates and keys
+    mkdir -p "$CERT_DIR"
+
+    # Generate SSL certificate and key if not already present
+    if [[ ! -f $SERVER_CERT || ! -f $SERVER_KEY ]]; then
+        echo -e "[INFO] Generating SSL certificate and key..."
+        openssl req -x509 -nodes -newkey rsa:2048 -keyout "$SERVER_KEY" -out "$SERVER_CERT" -days 365 \
+            -subj "/C=US/ST=Termux/L=SecureEnv/O=SecureProject/OU=IT/CN=localhost"
+        echo -e "[INFO] Encryption setup completed."
+    else
+        echo -e "[INFO] Encryption already configured."
+    fi
+}
+
+# Function to start secure communication
+start_secure_communication() {
+    echo -e "\n[INFO] Starting secure communication..."
+    openssl s_server -accept 8080 -cert "$SERVER_CERT" -key "$SERVER_KEY" -quiet &
+    SERVER_PID=$!
+    echo -e "[INFO] Secure server started with PID: $SERVER_PID"
+}
+
+# Function to stop secure communication
+stop_secure_communication() {
+    if [[ -n $SERVER_PID ]]; then
+        echo -e "\n[INFO] Stopping secure server with PID: $SERVER_PID"
+        kill $SERVER_PID
+        unset SERVER_PID
+    fi
+}
+
+# Function to sync with GitHub
+sync_with_github() {
+    echo -e "\n[INFO] Syncing with GitHub repository..."
+
+    # Check if the repository directory exists
+    if [[ ! -d $GIT_DIR ]]; then
+        echo -e "[INFO] Cloning repository..."
+        git clone $GITHUB_REPO $GIT_DIR
+    else
+        echo -e "[INFO] Pulling latest changes..."
+        cd $GIT_DIR || exit
+        git pull
+    fi
+    echo -e "[INFO] GitHub sync completed."
+}
+
+# Function to install required dependencies
+install_dependencies() {
+    echo -e "\n[INFO] Installing required packages..."
+    pkg update && pkg upgrade -y
+    pkg install -y openssl git
+    echo -e "[INFO] Dependencies installed."
+}
+
+# Function to display the login page
+login_page() {
+    clear
+    echo -e "\n====================================="
+    echo -e "          Welcome to Termux          "
+    echo -e "====================================="
+    echo -e "\n    Secure your terminal environment"
+    echo -e "\n====================================="
+    echo -n "Enter Username: "
+    read username
+    echo -n "Enter Password: "
+    read -s password
+    echo -e "\n"
+
+    # Validate credentials
+    if [[ $username == "admin" && $password == "password123" ]]; then
+        echo -e "\n[INFO] Login Successful!"
+        sleep 1
+        main_interface
+    else
+        echo -e "\n[ERROR] Invalid Username or Password. Try again."
+        sleep 2
+        login_page
+    fi
+}
+
+# Function to display the main interface
+main_interface() {
+    while true; do
+        clear
+        echo -e "\n====================================="
+        echo -e "       Secure Termux Interface       "
+        echo -e "====================================="
+        echo -e "\n1. Update and Upgrade Packages"
+        echo -e "2. Sync with GitHub Repository"
+        echo -e "3. Display System Information"
+        echo -e "4. Clear Cache"
+        echo -e "5. Exit"
+        echo -e "====================================="
+        echo -n "Choose an option: "
+        read choice
+
+        case $choice in
+            1)
+                echo -e "[INFO] Updating and upgrading packages..."
+                pkg update && pkg upgrade -y
+                echo -e "[INFO] Packages updated successfully!"
+                sleep 2
+                ;;
+            2)
+                sync_with_github
+                sleep 2
+                ;;
+            3)
+                echo -e "[INFO] System Information:"
+                uname -a
+                echo -e "[INFO] CPU Info:"
+                cat /proc/cpuinfo | head -10
+                echo -e "[INFO] Memory Info:"
+                free -h
+                echo -e "\nPress Enter to return to the main menu."
+                read
+                ;;
+            4)
+                echo -e "[INFO] Clearing cache..."
+                rm -rf ~/cache/*
+                echo -e "[INFO] Cache cleared."
+                sleep 2
+                ;;
+            5)
+                echo -e "[INFO] Exiting... Goodbye!"
+                stop_secure_communication
+                exit 0
+                ;;
+            *)
+                echo -e "[ERROR] Invalid option. Please try again."
+                sleep 2
+                ;;
+        esac
+    done
+}
+
+# Initialize encryption, install dependencies, sync GitHub, and start secure communication
+install_dependencies
+setup_encryption
+start_secure_communication
+sync_with_github
+
+# Start the login process
+login_page
