@@ -129,40 +129,24 @@ main_interface() {
         echo
         echo "1. Create/Edit a File"
         echo "2. View Saved Files"
-        echo "3. Logout"
+        echo "3. Manage Projects"
+        echo "4. Logout"
         echo "====================================="
         echo -n "Choose an option: "
         read choice
 
         case $choice in
             1)
-                echo -n "Enter file name (e.g., myfile.txt): "
-                read filename
-                nano "$user_directory/$filename"
-                echo "File saved to $user_directory/$filename"
-                sleep 2
+                create_or_edit_file "$username"
                 ;;
             2)
-                echo "Saved Files:"
-                ls "$user_directory"
-                echo "Press Enter to return to the menu."
-                read
+                view_files "$username"
                 ;;
             3)
-                echo "Logging out... Saving your session..."
-                
-                # Save session data
-                tar -czf "$user_directory/session.tar.gz" -C "$user_directory" .
-                encrypt_file "$user_directory/session.tar.gz"
-
-                # Encrypt and sync to GitHub
-                echo "Syncing progress to GitHub..."
-                git add .
-                git commit -m "Auto-save progress for user $username"
-                git push
-                echo "Session saved and synced!"
-                sleep 2
-
+                manage_projects "$username"
+                ;;
+            4)
+                logout_user "$username"
                 break
                 ;;
             *)
@@ -171,6 +155,111 @@ main_interface() {
                 ;;
         esac
     done
+}
+
+# Create or Edit a File
+create_or_edit_file() {
+    username=$1
+    while true; do
+        clear
+        echo "====================================="
+        echo "     File Creation and Editing      "
+        echo "====================================="
+        echo -n "Enter file name (e.g., myfile.txt): "
+        read filename
+        nano "users/$username/$filename"
+        echo "File saved to users/$username/$filename"
+        echo "Press Enter to return to main menu or type 'back' to go back."
+        read back_option
+        if [[ "$back_option" == "back" ]]; then
+            break
+        fi
+    done
+}
+
+# View Saved Files
+view_files() {
+    username=$1
+    clear
+    echo "====================================="
+    echo "     Saved Files                    "
+    echo "====================================="
+    ls "users/$username"
+    echo "Press Enter to return to main menu."
+    read
+}
+
+# Manage Projects
+manage_projects() {
+    username=$1
+    while true; do
+        clear
+        echo "====================================="
+        echo "         Manage Your Projects        "
+        echo "====================================="
+        echo "1. Create a New Project"
+        echo "2. View Existing Projects"
+        echo "3. Back to Main Menu"
+        echo "====================================="
+        echo -n "Choose an option: "
+        read project_choice
+
+        case $project_choice in
+            1)
+                create_new_project "$username"
+                ;;
+            2)
+                view_projects "$username"
+                ;;
+            3)
+                break
+                ;;
+            *)
+                echo "Invalid option. Please try again."
+                sleep 2
+                ;;
+        esac
+    done
+}
+
+# Create a New Project
+create_new_project() {
+    username=$1
+    echo -n "Enter project name: "
+    read project_name
+    mkdir -p "users/$username/projects/$project_name"
+    echo "Project '$project_name' created successfully!"
+    sleep 2
+}
+
+# View Existing Projects
+view_projects() {
+    username=$1
+    clear
+    echo "====================================="
+    echo "     Your Projects                  "
+    echo "====================================="
+    ls "users/$username/projects"
+    echo "Press Enter to return to manage projects."
+    read
+}
+
+# Logout User and Save Session
+logout_user() {
+    username=$1
+    echo "Logging out... Saving your session..."
+
+    # Save session data
+    tar -czf "users/$username/session.tar.gz" -C "users/$username" .
+    encrypt_file "users/$username/session.tar.gz"
+
+    # Encrypt and sync to GitHub
+    echo "Syncing progress to GitHub..."
+    git add .
+    git commit -m "Auto-save progress for user $username"
+    git push
+    echo "Session saved and synced!"
+    sleep 2
 }
 
 # Start Script
@@ -209,4 +298,3 @@ while true; do
             ;;
     esac
 done
-    
